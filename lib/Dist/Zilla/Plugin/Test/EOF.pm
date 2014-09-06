@@ -5,7 +5,7 @@ use Moose;
 use 5.010;
 use namespace::autoclean;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 extends 'Dist::Zilla::Plugin::InlineFiles';
 with 'Dist::Zilla::Role::TextTemplate';

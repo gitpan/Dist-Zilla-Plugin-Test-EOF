@@ -22,9 +22,10 @@ no_index:
     - eg
     - examples
 requires:
+  Test::EOF: '0.04'
   perl: '5.008005'
 resources:
   bugtracker: https://github.com/Csson/p5-dist-zilla-plugin-test-eof/issues
   homepage: https://github.com/Csson/p5-dist-zilla-plugin-test-eof
   repository: https://github.com/Csson/p5-dist-zilla-plugin-test-eof.git
-version: '0.01'
+version: '0.02'
