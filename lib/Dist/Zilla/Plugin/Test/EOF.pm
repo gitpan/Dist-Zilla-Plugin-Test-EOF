@@ -1,14 +1,19 @@
+use 5.10.1;
+
 package Dist::Zilla::Plugin::Test::EOF;
 
 use strict;
 use Moose;
-use 5.010;
+use Sub::Exporter::ForMethods 'method_installer';
+use Data::Section { installer => method_installer }, '-setup';
 use namespace::autoclean;
 
-our $VERSION = '0.04';
+our $VERSION = '0.0500'; # VERSION
 
-extends 'Dist::Zilla::Plugin::InlineFiles';
-with 'Dist::Zilla::Role::TextTemplate';
+with 'Dist::Zilla::Role::FileGatherer',
+     'Dist::Zilla::Role::TextTemplate',
+     'Dist::Zilla::Role::PrereqSource',
+;
 
 has minimum_newlines => (
     is => 'ro',
@@ -26,24 +31,56 @@ has strict => (
     isa => 'Bool',
     default => 0,
 );
+has filename => (
+    is => 'ro',
+    isa => 'Str',
+    lazy => 1,
+    default => 'xt/author/eof.t',
+);
 
-around add_file => sub {
-    my ($orig, $self, $file) = @_;
 
-    return $self->$orig(
-        Dist::Zilla::File::InMemory->new({
-            name    => $file->name,
+around dump_config => sub {
+    my($orig, $self) = @_;
+    my $config = $self->$orig;
+
+    $config->{+__PACKAGE__} = {
+        filename => $self->filename,
+    };
+    return $config;
+};
+
+sub gather_files {
+    my $self = shift;
+
+    require Dist::Zilla::File::InMemory;
+
+    $self->add_file(
+        Dist::Zilla::File::InMemory->new(
+            name => $self->filename,
             content => $self->fill_in_string(
-                $file->content, {
-                    name    => __PACKAGE__,
-                    version => __PACKAGE__->VERSION || 'unknown version',
+                ${ $self->section_data('__TEST__') },
+                {
+                    name => __PACKAGE__,
+                    version => __PACKAGE__->VERSION || 'boostraped_version',
                     minimum_newlines => ($self->strict ? \1 : \$self->minimum_newlines),
                     maximum_newlines => ($self->strict ? \1 : \$self->maximum_newlines),
                 },
             ),
-        }),
+        ),
     );
-};
+}
+
+sub register_prereqs {
+    my $self = shift;
+    $self->zilla->register_prereqs(
+        {
+            type => 'requires',
+            phase => 'develop',
+        },
+        'Test::More' => 0,
+        'Test::EOF' => 0,
+    );
+}
 
 __PACKAGE__->meta->make_immutable;
 
@@ -87,6 +124,10 @@ Default: C<0>
 
 If true, sets both C<minimum_newlines> and C<maximum_newlines> to C<1>. This option has precedence.
 
+=head1 SEE ALSO
+
+L<Dist::Zilla::Plugin::Test::EOL>
+
 =head1 AUTHOR
 
 Erik Carlsson E<lt>info@code301.comE<gt>
@@ -100,13 +141,10 @@ Copyright 2014- Erik Carlsson
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-=head1 SEE ALSO
-
 =cut
 
-
 __DATA__
-___[ xt/author/test-eof.t ]___
+___[ __TEST__ ]___
 use strict;
 use warnings;
 use Test::More;
@@ -118,4 +156,3 @@ plan skip_all => 'Test::EOF required to test for correct end of file flag' if $@
 all_perl_files_ok({ minimum_newlines => {{ $minimum_newlines }}, maximum_newlines => {{ $maximum_newlines }} });
 
 done_testing();
-
